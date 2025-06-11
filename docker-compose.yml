@@ -1,0 +1,216 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    networks:
+      - data_pipeline_network
+
+  redis:
+    image: redis:alpine
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+    networks:
+      - data_pipeline_network
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
+    ports:
+      - "8080:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - data_pipeline_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      - airflow-webserver
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
+    command: scheduler
+    networks:
+      - data_pipeline_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  airflow-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      - airflow-scheduler
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
+    command: celery worker
+    networks:
+      - data_pipeline_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - data_pipeline_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  spark-master:
+    image: bitnami/spark:3.5.0
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_IPS=spark-master
+      - SPARK_PUBLIC_DNS=spark-master
+    ports:
+      - "8081:8080"
+      - "7077:7077"
+    networks:
+      - data_pipeline_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+  spark-worker:
+    image: bitnami/spark:3.5.0
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_IPS=spark-worker
+      - SPARK_PUBLIC_DNS=spark-worker
+    depends_on:
+      - spark-master
+    networks:
+      - data_pipeline_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - POSTGRES_URI=postgresql://airflow:airflow@postgres/airflow
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+    networks:
+      - data_pipeline_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+    depends_on:
+      - spark-master
+      - spark-worker
+      - minio
+    networks:
+      - data_pipeline_network
+
+volumes:
+  postgres-db-volume:
+  minio-data:
+
+networks:
+  data_pipeline_network:
+    driver: bridge 

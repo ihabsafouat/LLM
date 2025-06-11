@@ -1,0 +1,69 @@
+config_version: 3.0
+datasources:
+  pandas_datasource:
+    class_name: Datasource
+    module_name: great_expectations.datasource
+    execution_engine:
+      class_name: PandasExecutionEngine
+      module_name: great_expectations.execution_engine
+    data_connectors:
+      runtime_data_connector:
+        class_name: RuntimeDataConnector
+        module_name: great_expectations.datasource.data_connector
+        batch_identifiers:
+          - default_identifier_name
+expectations_store_name: expectations_store
+validations_store_name: validations_store
+evaluation_parameter_store_name: evaluation_parameter_store
+plugins_directory:
+validation_operators:
+  action_list_operator:
+    class_name: ActionListValidationOperator
+    action_list:
+      - name: store_validation_result
+        action:
+          class_name: StoreValidationResultAction
+      - name: store_evaluation_params
+        action:
+          class_name: StoreEvaluationParametersAction
+      - name: update_data_docs
+        action:
+          class_name: UpdateDataDocsAction
+stores:
+  expectations_store:
+    class_name: ExpectationsStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: C:\Users\Ihab\Desktop\LLM\great_expectations\expectations
+  validations_store:
+    class_name: ValidationsStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: C:\Users\Ihab\Desktop\LLM\great_expectations\validations
+  evaluation_parameter_store:
+    class_name: EvaluationParameterStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: C:\Users\Ihab\Desktop\LLM\great_expectations\evaluation_parameters
+  checkpoint_store:
+    class_name: CheckpointStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: C:\Users\Ihab\Desktop\LLM\great_expectations\checkpoints
+notebooks:
+data_docs_sites:
+  local_site:
+    class_name: SiteBuilder
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: C:\Users\Ihab\Desktop\LLM\great_expectations\uncommitted/data_docs/local_site
+    site_index_builder:
+      class_name: DefaultSiteIndexBuilder
+config_variables_file_path:
+anonymous_usage_statistics:
+  data_context_id: e059acee-34c4-4133-b0e6-d78f9809e5b0
+  enabled: false
+include_rendered_content:
+  globally: false
+  expectation_suite: false
+  expectation_validation_result: false

@@ -1,0 +1,57 @@
+# Use multi-stage build
+FROM python:3.9-slim as builder
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=100 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements files
+COPY requirements-core.txt requirements-validation.txt ./
+
+# Install Python dependencies in stages
+RUN pip install --no-cache-dir -r requirements-core.txt && \
+    pip install --no-cache-dir -r requirements-validation.txt && \
+    pip install apache-airflow==2.7.1
+
+# Final stage
+FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    AIRFLOW_HOME=/app/airflow
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.9/site-packages/ /usr/local/lib/python3.9/site-packages/
+
+# Install Airflow in final stage
+RUN pip install --no-cache-dir apache-airflow==2.7.1
+
+# Create necessary directories
+RUN mkdir -p /app/airflow/dags /app/airflow/plugins /app/airflow/logs
+
+# Copy application code
+COPY src/ src/
+COPY config/ config/
+COPY scripts/ scripts/
+
+# Command to run the Airflow webserver and initialize db at container start
+CMD ["sh", "-c", "airflow db init && airflow webserver"] 
