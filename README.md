@@ -62,7 +62,7 @@ gpt-from-scratch/
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/gpt-from-scratch.git
+   git clone https://github.com/ihabsafouat/gpt-from-scratch.git
    cd gpt-from-scratch
    ```
 
