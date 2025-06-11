@@ -179,19 +179,9 @@ If you don't have an NVIDIA GPU, then the `device` parameter will default to `'c
 - if this doesn't work, default to the wizard of oz mini dataset for training / validation
 
 ## Socials
-Twitter / X - https://twitter.com/elliotarledge
 
-My YouTube Channel - https://www.youtube.com/channel/UCjlt_l6MIdxi4KoxuMjhYxg
+Linkedin - https://www.linkedin.com/in/ihab-safouat-670993328/
 
-How to SSH from Mac to Windows - https://www.youtube.com/watch?v=7hBeAb6WyIg&t=
-
-How to Setup Jupyter Notebooks in 5 minutes or less - https://www.youtube.com/watch?v=eLmweqU5VBA&t=
-
-Linkedin - https://www.linkedin.com/in/elliot-arledge-a392b7243/
-
-Join My Discord Server - https://discord.gg/pV7ByF9VNm
-
-Schedule a 1-on-1: https://calendly.com/elliot-ayxc/60min
 
 ## Research Papers:
 Attention is All You Need - https://arxiv.org/pdf/1706.03762.pdf
