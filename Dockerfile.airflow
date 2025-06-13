@@ -21,6 +21,7 @@ COPY requirements-core.txt requirements-validation.txt ./
 # Install Python dependencies in stages
 RUN pip install --no-cache-dir -r requirements-core.txt && \
     pip install --no-cache-dir -r requirements-validation.txt && \
+    pip install pendulum==2.1.2 && \
     pip install apache-airflow==2.7.1
 
 # Final stage
