@@ -29,11 +29,17 @@ FROM python:3.9-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    AIRFLOW_HOME=/app/airflow
+    AIRFLOW_HOME=/app/airflow \
+    AIRFLOW__LOGGING__LOGGING_LEVEL=INFO \
+    AIRFLOW__LOGGING__LOGGING_CONFIG_CLASS=airflow.config_templates.airflow_local_settings.DEFAULT_LOGGING_CONFIG \
+    AIRFLOW__LOGGING__BASE_LOG_FOLDER=/app/airflow/logs \
+    AIRFLOW__LOGGING__PROCESSOR_LOG_FOLDER=/app/airflow/logs/scheduler \
+    PATH="/usr/local/bin:${PATH}"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -41,12 +47,11 @@ WORKDIR /app
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.9/site-packages/ /usr/local/lib/python3.9/site-packages/
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
-# Install Airflow in final stage
-RUN pip install --no-cache-dir apache-airflow==2.7.1
-
-# Create necessary directories
-RUN mkdir -p /app/airflow/dags /app/airflow/plugins /app/airflow/logs
+# Create necessary directories and set permissions
+RUN mkdir -p /app/airflow/dags /app/airflow/plugins /app/airflow/logs /app/airflow/logs/scheduler && \
+    chmod -R 777 /app/airflow/logs
 
 # Copy application code
 COPY src/ src/
