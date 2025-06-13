@@ -22,7 +22,7 @@ COPY requirements-core.txt requirements-validation.txt ./
 RUN pip install --no-cache-dir -r requirements-core.txt && \
     pip install --no-cache-dir -r requirements-validation.txt && \
     pip install pendulum==2.1.2 && \
-    pip install apache-airflow==2.7.1
+    pip install apache-airflow[postgres,redis,celery]==2.10.0
 
 # Final stage
 FROM python:3.9-slim

@@ -50,7 +50,29 @@ services:
       - ./logs:/app/airflow/logs
       - ./plugins:/app/airflow/plugins
       - ./config:/app/airflow/config
-    command: airflow db init && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin && airflow connections add 'postgres_default' --conn-type 'postgres' --conn-host 'postgres' --conn-login 'airflow' --conn-password 'airflow' --conn-schema 'airflow' && airflow connections add 'redis_default' --conn-type 'redis' --conn-host 'redis' --conn-port 6379
+    command: >
+      bash -c '
+        echo "Waiting for database to be ready..."
+        sleep 10
+        airflow db init
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin
+        airflow connections add "postgres_default" \
+          --conn-type "postgres" \
+          --conn-host "postgres" \
+          --conn-login "airflow" \
+          --conn-password "airflow" \
+          --conn-schema "airflow"
+        airflow connections add "redis_default" \
+          --conn-type "redis" \
+          --conn-host "redis" \
+          --conn-port 6379
+      '
     networks:
       - data_pipeline_network
 
